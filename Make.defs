@@ -7,7 +7,7 @@ LD = $(CC)
 RM = rm -f
 MKDIR = mkdir -p
 INST = install -c
-CFLAGS = -Wall -g -fPIC -I../../include -I/opt/local/include -O2 -D_XOPEN_SOURCE=500 -D_SVID_SOURCE # -fno-stack-protector
+CFLAGS = -Wall -g -std=gnu99 -fPIC -I../../include -I/opt/local/include -O2 -D_XOPEN_SOURCE=500 -D_DEFAULT_SOURCE # -fno-stack-protector
 LDFLAGS = -shared # -Wl,$(LINKEROPTS)
 LINKEROPTS = 
 LDLIBS = -lpam -lcrypt

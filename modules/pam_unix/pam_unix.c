@@ -32,8 +32,8 @@
 #include <unistd.h>
 #include <time.h>
 #include <string.h>
+#include <fcntl.h>
 #include <shadow.h>  
-#include "md5.h"
 
 #define PAM_SM_AUTH
 #define PAM_SM_ACCOUNT
@@ -41,8 +41,10 @@
 #define PAM_SM_SESSION
 
 #define MAX_RETRIES 		3
-#define DEFAULT_WARN            (2L * 7L * 86400L) /* two weeks */
+#define DEFAULT_WARN		(2L * 7L * 86400L) /* two weeks */
 
+#define SALTSIZE			32
+#define SALTSTRINGSIZE		64
 
 #include <security/pam_modules.h>
 #include <security/pam_appl.h>
@@ -55,14 +57,53 @@
  * Helper functions for internal use
  */
 
-static int update_shadow( pam_handle_t * pamh , 
-		const char * user , const char * newhashedpwd );
+static int update_shadow( pam_handle_t * pamh ,
+		const char * user , char * newhashedpwd );
 static int update_passwd( pam_handle_t * pamh ,
-		const char * user ,const char * newhashedpwd ); 
+		const char * user , char * newhashedpwd );
 static char * read_shadow(const char * user) ; 
 
-static void to64(char *s, long v, int n); 
-void makesalt(char salt[SALTSIZE]);
+/*
+ * Mostly stolen from freebsd-lib's pam_unix module which was mostly
+ * stolen from passwd(1)'s local_passwd.c
+ *
+ * Good ideas are meant to be reused ;)
+ */
+static unsigned char itoa64[] =         /* 0 ... 63 => ascii - 64 */
+        "./0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+
+static void to64(char *s, long v, int n) {
+	while (--n >= 0) {
+		*s++ = itoa64[v&0x3f];
+		v >>= 6;
+	}
+}
+
+/* Generate a salt string with the given generator ID and number of rounds.
+ * Returns 0 if OK, 1 on error */
+static int makesalt(int id, long rounds, char out[SALTSTRINGSIZE+1]) {
+	unsigned char tmp;
+	char salt[SALTSIZE+1];
+
+	/* These are not really random numbers, they are just
+	 * numbers that change to thwart construction of a
+	 * dictionary. This is exposed to the public.
+	 */
+	int fd = open("/dev/urandom", O_RDONLY);
+	if(fd == -1) {
+		return 1;
+	}
+
+	for (int i = 0; i < SALTSIZE; i += 1) {
+		read (fd, &tmp, sizeof(char) );
+		to64(&salt[i], tmp, 1);
+	}
+	close(fd);
+	salt[SALTSIZE] = '\0';
+
+	snprintf(out, SALTSTRINGSIZE+1, "$%d$rounds=%ld$%s$", id, rounds, salt);
+	return 0;
+}
 
 /*
  * User authentication
@@ -83,7 +124,7 @@ pam_sm_authenticate(pam_handle_t *pamh, int flags,
 	} else {
 		if ((pam_err = pam_get_user(pamh, &user, NULL)) != PAM_SUCCESS) {
 			PAM_ERROR("Authenticating with uname [%s] failed.", user);
-	                return (pam_err);
+			return (pam_err);
 		}
 
 		pwd = getpwnam(user);
@@ -243,7 +284,7 @@ pam_sm_chauthtok(pam_handle_t *pamh, int flags,
 	 */
 	struct passwd  *old_pwd;
         const char *user, *old_pass, *new_pass;
-        char  *hashedpwd,  salt[SALTSIZE+1];
+        char salt[SALTSTRINGSIZE];
 
 	int pam_err, retries;
 	
@@ -312,7 +353,7 @@ pam_sm_chauthtok(pam_handle_t *pamh, int flags,
 		
 		PAM_LOG("Got old token for user [%s].",user);
 		
-		hashedpwd = crypt(old_pass, old_pwd->pw_passwd);
+		char* hashedpwd = crypt(old_pass, old_pwd->pw_passwd);
 		
 		if (old_pass[0] == '\0' && !openpam_get_option(pamh, PAM_OPT_NULLOK))
 			return (PAM_PERM_DENIED);
@@ -359,16 +400,13 @@ pam_sm_chauthtok(pam_handle_t *pamh, int flags,
 			return (PAM_PERM_DENIED);
 
 		
-		makesalt(salt);
 		/* Update shadow/passwd entries for Linux */
-		if ( openpam_get_option (pamh, PAM_OPT_MD5) ) {
-			pam_err = update_shadow( pamh ,user, 
-					MD5Hash(new_pass, salt)) ;
-		} else { 
-
-			pam_err = update_shadow( pamh ,user,
-					crypt(new_pass, salt));
+		if(makesalt(6, 10000, salt)) {
+		    PAM_ERROR("Failed to generate salt!");
+		    return (PAM_SYSTEM_ERR);
 		}
+		pam_err = update_shadow(pamh, user, crypt(new_pass, salt));
+
 	 	if ( pam_err != PAM_SUCCESS) 
 			return (pam_err);
 
@@ -443,13 +481,13 @@ pam_sm_close_session( pam_handle_t * pamh, int flags,
  */
 
 static int update_shadow( pam_handle_t * pamh , const char * user,
-		const char * newhashedpwd ) {
+		char * newhashedpwd ) {
 	FILE *oldshadow, *newshadow;
-	struct spwd *pwd,*cur_pwd;
+	struct spwd *cur_pwd;
 	struct stat filestat;
 
 
-	if ( (pwd = getspnam(user)) == NULL) 
+	if ( getspnam(user) == NULL) 
 		return PAM_USER_UNKNOWN;
 
 	if ( (oldshadow = fopen ("/etc/shadow", "r")) == NULL ) {
@@ -542,13 +580,13 @@ static int update_shadow( pam_handle_t * pamh , const char * user,
 #define NEW_PASSWD "/etc/.passwd"
 
 static int update_passwd( pam_handle_t * pamh, const char * user,
-		const char * newhashedpwd ) {
+		char * newhashedpwd ) {
 	FILE *oldpasswd, *newpasswd;
-	struct passwd *pwd,*cur_pwd;
+	struct passwd *cur_pwd;
 	struct stat filestat;
 
 
-	if ( (pwd = getpwnam(user)) == NULL) 
+	if ( getpwnam(user) == NULL) 
 		return PAM_USER_UNKNOWN;
 
 	if ( (oldpasswd = fopen ("/etc/passwd", "r")) == NULL ) {

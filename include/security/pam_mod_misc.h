@@ -42,7 +42,6 @@
 #define PAM_OPT_DEBUG		"debug"
 //#define PAM_OPT_PRELIM_CHECK	"prelim_check"
 //#define PAM_OPT_UPDATE_AUTHTOK	"update_authtok"
-#define PAM_OPT_MD5		"md5"
 
 
 #define	PAM_LOG(...) \
