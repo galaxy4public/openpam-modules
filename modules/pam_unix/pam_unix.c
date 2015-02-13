@@ -120,7 +120,8 @@ pam_sm_authenticate(pam_handle_t *pamh, int flags,
 
 	if (openpam_get_option(pamh, PAM_OPT_AUTH_AS_SELF)) {
 		PAM_LOG("Authenticating as self.");
-		pwd = getpwnam(getlogin());
+		user = getlogin();
+		pwd = getpwnam(user);
 	} else {
 		if ((pam_err = pam_get_user(pamh, &user, NULL)) != PAM_SUCCESS) {
 			PAM_ERROR("Authenticating with uname [%s] failed.", user);
