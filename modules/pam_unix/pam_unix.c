@@ -157,15 +157,15 @@ pam_sm_authenticate(pam_handle_t *pamh, int flags,
                 return (pam_err);
 	if (pam_err != PAM_SUCCESS)
 	        return (PAM_AUTH_ERR);
-	
+
 	/* check passwd entry */
 
 	if ( strncmp(real_hash, "x", sizeof(char)) != 0 ) {
 		real_hash = read_shadow(user);
 	}
 
-	crypt_pass = crypt(pass,real_hash); 
-	if ( strcmp(crypt_pass, real_hash) != 0 ) {
+	crypt_pass = crypt(pass, real_hash);
+	if ( safe_strcmp(crypt_pass, real_hash) != 0 ) {
 		PAM_ERROR("Wrong password. Authentication failed.");
 		pam_err = PAM_AUTH_ERR;
 	} else {
@@ -179,8 +179,8 @@ pam_sm_authenticate(pam_handle_t *pamh, int flags,
 PAM_EXTERN int
 pam_sm_setcred(pam_handle_t *pamh , int flags ,
 		    int argc , const char *argv[] ) {
-	
-	/* 
+
+	/*
 	 * This functions takes care of renewing/initializing
 	 * user credentials as well as gid/uids. Someday, it
 	 * will be completed. For now, it's not very urgent. 
@@ -347,23 +347,26 @@ pam_sm_chauthtok(pam_handle_t *pamh, int flags,
 			 * ask for a password.
 			 */
 			old_pass = "";
-		} else { 
-			pam_err = pam_get_authtok(pamh,PAM_OLDAUTHTOK, 
+		} else {
+			pam_err = pam_get_authtok(pamh,PAM_OLDAUTHTOK,
 					&old_pass, NULL);
-			if (pam_err != PAM_SUCCESS ) 
+			if (pam_err != PAM_SUCCESS ) {
 				return (pam_err);
+			}
 
-		} 
-		
+		}
+
 		PAM_LOG("Got old token for user [%s].",user);
-		
+
 		char* hashedpwd = crypt(old_pass, old_pwd->pw_passwd);
-		
-		if (old_pass[0] == '\0' && !openpam_get_option(pamh, PAM_OPT_NULLOK))
+
+		if (old_pass[0] == '\0' && !openpam_get_option(pamh, PAM_OPT_NULLOK)) {
 			return (PAM_PERM_DENIED);
-		
-		if (strcmp(hashedpwd, old_pwd->pw_passwd) != 0)
+		}
+
+		if (safe_strcmp(hashedpwd, old_pwd->pw_passwd) != 0) {
 			return (PAM_PERM_DENIED);
+		}
 
 	} else if ( flags &  PAM_UPDATE_AUTHTOK )  {
 		PAM_LOG("Doing actual update.");
