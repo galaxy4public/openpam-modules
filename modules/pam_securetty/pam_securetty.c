@@ -41,79 +41,79 @@
 
 PAM_EXTERN int
 pam_sm_authenticate(pam_handle_t * pamh, int flags,
-		int argc, const char * argv[]) 
+		int argc, const char * argv[])
 {
 	struct passwd *pwd;
 	struct stat ttyfileinfo;
 	const char *user;
-	const char *tty; 
+	const char *tty;
 	char ttyfileline[256];
 	FILE *ttyfile;
 	int pam_err;
 
-	if ( ( (pam_err = pam_get_user(pamh, &user, NULL)) != PAM_SUCCESS ) 
+	if ( ( (pam_err = pam_get_user(pamh, &user, NULL)) != PAM_SUCCESS )
 			|| ( user == NULL ) )  {
 		PAM_ERROR("Error recovering username.");
 		return (pam_err);
 	}
 
-	if ( (pwd = getpwnam(user)) == NULL ) { 
+	if ( (pwd = getpwnam(user)) == NULL ) {
 		PAM_ERROR("Could not get passwd entry for user [%s]",user);
 		return (PAM_SERVICE_ERR);
 	}
 
-	if ( pwd->pw_uid  != 0 ) { 
+	if ( pwd->pw_uid  != 0 ) {
 		/* secure tty applies only to root */
 		return (PAM_SUCCESS);
 	}
 
-	if ( (pam_err = pam_get_item(pamh, PAM_TTY,(void *) &tty) ) != PAM_SUCCESS ) {
+	if ( (pam_err = pam_get_item(pamh, PAM_TTY,(void *) &tty) ) != PAM_SUCCESS ||
+	     tty == NULL ) {
 		PAM_ERROR("Could not determine user's tty");
 		return (pam_err);
-	}	
+	}
 
-	if (tty != NULL && strncmp(TTY_PREFIX, tty, sizeof(TTY_PREFIX)) == 0) {
+	if (strncmp(TTY_PREFIX, tty, sizeof(TTY_PREFIX)) == 0) {
 		PAM_LOG("tty starts with " TTY_PREFIX);
 		/* get rid of prefix */
 		tty = (const char *)tty + sizeof(TTY_PREFIX) - 1;
 	}
-	
-	if ( stat(SECURETTY, &ttyfileinfo) ) { 
+
+	if ( stat(SECURETTY, &ttyfileinfo) ) {
 		PAM_ERROR("Could not open SECURETTY file :%s", SECURETTY);
-		/* From LinuxPAM, they say that for compatibility issues, 
+		/* From LinuxPAM, they say that for compatibility reasons,
 		 * this needs to succeed. */
 		return (PAM_SUCCESS);
 	}
 
 	if ((ttyfileinfo.st_mode & S_IWOTH) || !S_ISREG(ttyfileinfo.st_mode)) {
-		/* File is either world writable or not a regural file */
+		/* File is either world writable or not a regular file */
 		PAM_ERROR("SECURETTY file cannot be trusted!");
 		return (PAM_AUTH_ERR);
 	}
-	
+
 	/* Open read-only file with securettys */
-	if ( (ttyfile = fopen(SECURETTY,"r")) ==  NULL ) { 
+	if ( (ttyfile = fopen(SECURETTY,"r")) == NULL ) {
 		PAM_ERROR("Could not open SECURETTY file :%s", SECURETTY);
 		return (PAM_AUTH_ERR);
 	}
 
 	pam_err = 1;
 	/* Search in SECURETTY for tty */
-	while (fgets(ttyfileline, sizeof(ttyfileline)-1, ttyfile) != NULL 
-		&& pam_err) { 
-	        if (ttyfileline[strlen(ttyfileline) - 1] == '\n')
-	        	ttyfileline[strlen(ttyfileline) - 1] = '\0';
+	while (fgets(ttyfileline, sizeof(ttyfileline)-1, ttyfile) != NULL && pam_err) {
+		if (ttyfileline[strlen(ttyfileline) - 1] == '\n') {
+			ttyfileline[strlen(ttyfileline) - 1] = '\0';
+		}
 
 		pam_err = strcmp(ttyfileline, tty);
-
 	}
 
 	fclose(ttyfile);
 
-	if (!pam_err) { 
+	if (!pam_err) {
 		/* tty found in SECURETTY. Allow access */
 		PAM_LOG("Access granted for %s on tty %s.", user, tty);
-		return (PAM_SUCCESS); 
+		return (PAM_SUCCESS);
 	}
 
 	PAM_ERROR("Access denied: tty %s is not secure", tty);
