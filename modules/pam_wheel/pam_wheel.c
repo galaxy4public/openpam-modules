@@ -50,9 +50,8 @@ pam_sm_authenticate(pam_handle_t * pamh, int flags,
 
 	/* Get info for target user. Who do you want to su to ? */
 
-	if ( ( (pam_err = pam_get_user(pamh, &target_user, NULL)) != PAM_SUCCESS )
-			|| ( orig_user == NULL ) )  {
-		PAM_ERROR("Error recovering username.");	
+	if ( (pam_err = pam_get_user(pamh, &target_user, NULL)) != PAM_SUCCESS ) {
+		PAM_ERROR("Error recovering username.");
 		return (pam_err);
 	}
 
@@ -60,17 +59,18 @@ pam_sm_authenticate(pam_handle_t * pamh, int flags,
 		PAM_ERROR("Could not get passwd entry for user [%s]",target_user);
 		return (PAM_SERVICE_ERR);
 	}
-	
+
 	if ( openpam_get_option(pamh, PAM_OPT_ROOT_ONLY) ) {
 		/* if su to non-root -> ignore */
-		if (tpwd->pw_uid != 0) 
+		if (tpwd->pw_uid != 0) {
 			return (PAM_AUTH_ERR);
+		}
 	}
-	
+
 	/* Get info for originating user. Who called su? */
 
 	if ( ( (pam_err = pam_get_user(pamh, &orig_user, NULL)) != PAM_SUCCESS )
-                        || ( orig_user == NULL ) )  {                                        
+                        || ( orig_user == NULL ) )  {
 	        PAM_ERROR("Error recovering username.");
 		return (pam_err);
 	}
