@@ -17,7 +17,7 @@ MANDIR = /usr/share/man/man8
 
 
 PROJ = $(LIBSHARED)
-OBJS = pam_unix.o
+OBJS = pam_unix.o util.o
 
 all:
 	case "`uname -s`" in \

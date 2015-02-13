@@ -47,6 +47,9 @@
 #define	PAM_LOG(...) \
 	openpam_log(PAM_LOG_DEBUG, __VA_ARGS__)
 
+#define PAM_WARN(...) \
+	openpam_log(PAM_LOG_NOTICE, __VA_ARGS__)
+
 #define	PAM_ERROR(...) \
 	openpam_log(PAM_LOG_ERROR, __VA_ARGS__)
 

@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2008 Seraphim Mellos <mellos@ceid.upatras.gr>
- * 
+ *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
  * files (the "Software"), to deal in the Software without
@@ -9,10 +9,10 @@
  * copies of the Software, and to permit persons to whom the
  * Software is furnished to do so, subject to the following
  * conditions:
- * 
+ *
  * The above copyright notice and this permission notice shall be
  * included in all copies or substantial portions of the Software.
- * 
+ *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
  * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
  * OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
@@ -21,9 +21,9 @@
  * WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
  * OTHER DEALINGS IN THE SOFTWARE.
- */ 
+ */
 
-#include <pwd.h> 
+#include <pwd.h>
 #include <netdb.h>
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -33,15 +33,13 @@
 #include <time.h>
 #include <string.h>
 #include <fcntl.h>
-#include <shadow.h>  
+#include <shadow.h>
+#include "util.h"
 
 #define PAM_SM_AUTH
 #define PAM_SM_ACCOUNT
 #define PAM_SM_PASSWORD
 #define PAM_SM_SESSION
-
-#define MAX_RETRIES 		3
-#define DEFAULT_WARN		(2L * 7L * 86400L) /* two weeks */
 
 #define SALTSIZE			32
 #define SALTSTRINGSIZE		64
@@ -61,7 +59,7 @@ static int update_shadow( pam_handle_t * pamh ,
 		const char * user , char * newhashedpwd );
 static int update_passwd( pam_handle_t * pamh ,
 		const char * user , char * newhashedpwd );
-static char * read_shadow(const char * user) ; 
+static char * read_shadow(const char * user) ;
 
 /*
  * Mostly stolen from freebsd-lib's pam_unix module which was mostly
@@ -81,7 +79,7 @@ static void to64(char *s, long v, int n) {
 
 /* Generate a salt string with the given generator ID and number of rounds.
  * Returns 0 if OK, 1 on error */
-static int makesalt(int id, long rounds, char out[SALTSTRINGSIZE+1]) {
+static int makesalt(int encrypt_method, long rounds, char out[SALTSTRINGSIZE]) {
 	unsigned char tmp;
 	char salt[SALTSIZE+1];
 
@@ -101,7 +99,7 @@ static int makesalt(int id, long rounds, char out[SALTSTRINGSIZE+1]) {
 	close(fd);
 	salt[SALTSIZE] = '\0';
 
-	snprintf(out, SALTSTRINGSIZE+1, "$%d$rounds=%ld$%s$", id, rounds, salt);
+	snprintf(out, SALTSTRINGSIZE, "$%d$rounds=%ld$%s$", encrypt_method, rounds, salt);
 	return 0;
 }
 
@@ -205,6 +203,8 @@ pam_sm_acct_mgmt(pam_handle_t *pamh, int flags ,
 	const char *user;
 	time_t curtime;
 
+	struct logindefs options;
+	logindefs_parse(&options);
 
 	pam_err = pam_get_user(pamh, &user, NULL);
 
@@ -229,7 +229,7 @@ pam_sm_acct_mgmt(pam_handle_t *pamh, int flags ,
 		if ( (curtime > pwd->sp_expire ) && ( pwd->sp_expire != -1 ) ) {
 			PAM_ERROR("Account has expired!");
 			return (PAM_ACCT_EXPIRED);
-		} else if ( ( pwd->sp_expire - curtime < DEFAULT_WARN) ) {
+		} else if ( ( pwd->sp_expire - curtime < options.pass_warn_age) ) {
 			PAM_ERROR("Warning: your account expires on %s",
 					ctime(&pwd->sp_expire));
 		}
@@ -288,7 +288,10 @@ pam_sm_chauthtok(pam_handle_t *pamh, int flags,
         char salt[SALTSTRINGSIZE];
 
 	int pam_err, retries;
-	
+
+	struct logindefs options;
+	logindefs_parse(&options);
+
 	/* identify user */
 
 	if (openpam_get_option(pamh, PAM_OPT_AUTH_AS_SELF)) {
@@ -365,17 +368,16 @@ pam_sm_chauthtok(pam_handle_t *pamh, int flags,
 	} else if ( flags &  PAM_UPDATE_AUTHTOK )  {
 		PAM_LOG("Doing actual update.");
 		pam_err= pam_get_authtok(pamh, PAM_OLDAUTHTOK ,&old_pass, NULL);
-                
+
 		if (pam_err != PAM_SUCCESS)
 			return (pam_err);
-		
+
 		PAM_LOG("Got old password");
 
 		retries = 0;
 		pam_err = PAM_AUTHTOK_ERR;
 
-		while ((pam_err != PAM_SUCCESS) && ( retries++ <= MAX_RETRIES)) {
-			
+		while ((pam_err != PAM_SUCCESS) && ( retries++ <= options.login_retries)) {
 			pam_err = pam_get_authtok(pamh, PAM_AUTHTOK,
 					&new_pass, NULL);
 
@@ -383,46 +385,47 @@ pam_sm_chauthtok(pam_handle_t *pamh, int flags,
 					 try again");
 
 		}
-		
+
 		if (pam_err != PAM_SUCCESS) {
 			PAM_ERROR("Unable to get new password!");
 			return (pam_err);
 		}
 
 		PAM_LOG("Got new password");
-		
-		/* 
-		 * checking has to be done (?) for the new passwd to 
-		 * verify it's not weak. 
+
+		/*
+		 * checking has to be done (?) for the new passwd to
+		 * verify it's not weak.
 		 */
-		
+
 		if (getuid() != 0 && new_pass[0] == '\0' &&
 				!openpam_get_option(pamh, PAM_OPT_NULLOK))
 			return (PAM_PERM_DENIED);
 
-		
 		/* Update shadow/passwd entries for Linux */
-		if(makesalt(6, 10000, salt)) {
+		if(makesalt(options.encrypt_method, options.rounds, salt)) {
 		    PAM_ERROR("Failed to generate salt!");
 		    return (PAM_SYSTEM_ERR);
 		}
 		pam_err = update_shadow(pamh, user, crypt(new_pass, salt));
 
-	 	if ( pam_err != PAM_SUCCESS) 
+	 	if (pam_err != PAM_SUCCESS) {
 			return (pam_err);
+		}
 
-		pam_err = update_passwd( pamh ,user,"x");
-		update_passwd( pamh ,user,"x");
-		if ( pam_err != PAM_SUCCESS) 
+		pam_err = update_passwd(pamh, user, "x");
+		update_passwd(pamh, user, "x");
+		if ( pam_err != PAM_SUCCESS) {
 			return (pam_err);
-	
+		}
+
 		PAM_LOG("Password changed for user [%s]", user);
 	} else {
 		pam_err = PAM_ABORT;
 		PAM_ERROR("Unrecognized flags.");
 		return (pam_err);
 	}
-	
+
 	return (PAM_SUCCESS);
 }
 
