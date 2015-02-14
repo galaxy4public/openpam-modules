@@ -165,6 +165,11 @@ pam_sm_authenticate(pam_handle_t *pamh, int flags,
 	}
 
 	crypt_pass = crypt(pass, real_hash);
+	if(crypt_pass == NULL) {
+	    PAM_ERROR("Error hashing password. Authentication failed.");
+	    return (PAM_SYSTEM_ERR);
+	}
+
 	if ( safe_strcmp(crypt_pass, real_hash) != 0 ) {
 		PAM_ERROR("Wrong password. Authentication failed.");
 		pam_err = PAM_AUTH_ERR;
@@ -359,6 +364,10 @@ pam_sm_chauthtok(pam_handle_t *pamh, int flags,
 		PAM_LOG("Got old token for user [%s].",user);
 
 		char* hashedpwd = crypt(old_pass, old_pwd->pw_passwd);
+		if(hashedpwd == NULL) {
+		    PAM_ERROR("Error hashing password. Authentication failed.");
+		    return (PAM_SYSTEM_ERR);
+		}
 
 		if (old_pass[0] == '\0' && !openpam_get_option(pamh, PAM_OPT_NULLOK)) {
 			return (PAM_PERM_DENIED);
@@ -410,7 +419,14 @@ pam_sm_chauthtok(pam_handle_t *pamh, int flags,
 		    PAM_ERROR("Failed to generate salt!");
 		    return (PAM_SYSTEM_ERR);
 		}
-		pam_err = update_shadow(pamh, user, crypt(new_pass, salt));
+
+		char* hashed_new_pass = crypt(new_pass, salt);
+		if(hashed_new_pass == NULL) {
+		    PAM_ERROR("Error hashing password!");
+		    return (PAM_SYSTEM_ERR);
+		}
+
+		pam_err = update_shadow(pamh, user, hashed_new_pass);
 
 	 	if (pam_err != PAM_SUCCESS) {
 			return (pam_err);
