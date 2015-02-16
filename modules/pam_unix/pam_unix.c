@@ -519,7 +519,7 @@ static int update_shadow( pam_handle_t * pamh , const char * user,
 		return (PAM_AUTHTOK_ERR);
 	}
 
-	if ( (newshadow = fopen (NEW_SHADOW, "w")) == NULL ) {
+	if ( (newshadow = fopen (NEW_SHADOW, "wx")) == NULL ) {
 		PAM_ERROR("Could not open temp file. Updating shadow \
 				database cancelled.");
 		fclose(oldshadow);
@@ -618,7 +618,7 @@ static int update_passwd( pam_handle_t * pamh, const char * user,
 		return (PAM_AUTHTOK_ERR);
 	}
 
-	if ( (newpasswd = fopen (NEW_PASSWD, "w")) == NULL ) {
+	if ( (newpasswd = fopen (NEW_PASSWD, "wx")) == NULL ) {
 		PAM_ERROR("Could not open temp file. Updating passwd \
 				database cancelled.");
 		fclose(oldpasswd);
