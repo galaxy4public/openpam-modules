@@ -67,8 +67,8 @@ pam_sm_authenticate(pam_handle_t * pamh, int flags,
 		return (PAM_SUCCESS);
 	}
 
-	if ( (pam_err = pam_get_item(pamh, PAM_TTY,(void *) &tty) ) != PAM_SUCCESS ||
-	     tty == NULL ) {
+	if ( (pam_err = pam_get_item(pamh, PAM_TTY,(void *) &tty) ) != PAM_SUCCESS || tty == NULL ) {
+		if(tty == NULL) { pam_err = PAM_SYSTEM_ERR; }
 		PAM_ERROR("Could not determine user's tty");
 		return (pam_err);
 	}
