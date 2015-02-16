@@ -134,7 +134,7 @@ pam_sm_authenticate(pam_handle_t *pamh, int flags,
 
 	if (pwd != NULL) {
 		PAM_LOG("Doing real authentication");
-		pass = pwd->pw_passwd; 
+		pass = pwd->pw_passwd;
 		if (pass[0] == '\0') {
 			if (!(flags & PAM_DISALLOW_NULL_AUTHTOK) &&
 					openpam_get_option(pamh, PAM_OPT_NULLOK)){
@@ -142,10 +142,10 @@ pam_sm_authenticate(pam_handle_t *pamh, int flags,
 						Authentication succesfull.", user);
 				return (PAM_SUCCESS);
 			}
-		}			
-		
+		}
+
 		real_hash = "*";
-		
+
 	} else {
 		PAM_LOG("Doing dummy authentication.");
 		real_hash = "x";
@@ -188,7 +188,7 @@ pam_sm_setcred(pam_handle_t *pamh , int flags ,
 	/*
 	 * This functions takes care of renewing/initializing
 	 * user credentials as well as gid/uids. Someday, it
-	 * will be completed. For now, it's not very urgent. 
+	 * will be completed. For now, it's not very urgent.
 	 */
 
 	return (PAM_SUCCESS);
@@ -221,14 +221,14 @@ pam_sm_acct_mgmt(pam_handle_t *pamh, int flags ,
 
 
 	PAM_LOG("Got user [%s]" , user );
-	
+
 	if (*pwd->sp_pwdp == '\0' &&
          	(flags & PAM_DISALLOW_NULL_AUTHTOK) != 0)
 		return (PAM_NEW_AUTHTOK_REQD);
 
 	/* Calculate current time */
 	curtime = time(NULL) / (60 * 60 * 24);
-	
+
 	/* Check for account expiration */
 	if (pwd->sp_expire > 0) {
 		if ( (curtime > pwd->sp_expire ) && ( pwd->sp_expire != -1 ) ) {
@@ -238,21 +238,21 @@ pam_sm_acct_mgmt(pam_handle_t *pamh, int flags ,
 			PAM_ERROR("Warning: your account expires on %s",
 					ctime(&pwd->sp_expire));
 		}
-	
+
 
 		if (pwd->sp_lstchg == 0 ) {
 			return (PAM_NEW_AUTHTOK_REQD);
 		}
 
 		/* check all other possibilities (mostly stolen from pam_tcb) */
-	
+
 		if ((curtime > (pwd->sp_lstchg + pwd->sp_max + pwd->sp_inact)) &&
 				(pwd->sp_max != -1) && (pwd->sp_inact != -1) &&
 				(pwd->sp_lstchg != 0)) {
 			PAM_ERROR("Account has expired!");
 			return (PAM_ACCT_EXPIRED);
 		}
-	
+
 		if (((pwd->sp_lstchg + pwd->sp_max) < curtime) &&
 			        (pwd->sp_max != -1)) {
 			PAM_ERROR("Account has expired!");
@@ -279,14 +279,14 @@ pam_sm_acct_mgmt(pam_handle_t *pamh, int flags ,
  * Password Management
  */
 
-PAM_EXTERN int 
+PAM_EXTERN int
 pam_sm_chauthtok(pam_handle_t *pamh, int flags,
-		int argc, const char *argv[]) 
+		int argc, const char *argv[])
 {
 
-	/* 
+	/*
 	 * NIS support will be left for future implementation.
-	 * This is standard unix passwd changing function. 
+	 * This is standard unix passwd changing function.
 	 */
 	struct passwd  *old_pwd;
         const char *user, *old_pass, *new_pass;
@@ -311,7 +311,7 @@ pam_sm_chauthtok(pam_handle_t *pamh, int flags,
 
 	        old_pwd = getpwnam(user);
 	}
-	
+
 	PAM_LOG("Got user: [%s]", user);
 
 	if (old_pwd == NULL) {
@@ -321,16 +321,16 @@ pam_sm_chauthtok(pam_handle_t *pamh, int flags,
 	}
 
 	/*
-	 * When looking through the LinuxPAM code, I came across this : 
+	 * When looking through the LinuxPAM code, I came across this :
 	 *
 	 * ` Various libraries at various times have had bugs related to
 	 * '+' or '-' as the first character of a user name. Don't
 	 * allow them. `
 	 *
-	 * I don't know if the problem is still around but just in case... 
+	 * I don't know if the problem is still around but just in case...
 	 */
 
-	if (user == NULL || user[0] == '-' || user[0] == '+' ) { 
+	if (user == NULL || user[0] == '-' || user[0] == '+' ) {
 		PAM_ERROR("Bad username [%s]", user);
 		return (PAM_USER_UNKNOWN);
 	}
@@ -339,16 +339,16 @@ pam_sm_chauthtok(pam_handle_t *pamh, int flags,
 
 	if ( flags & PAM_PRELIM_CHECK ) {
 		PAM_LOG("Doing preliminary actions.");
-		if (getuid() == 0 ) { 
+		if (getuid() == 0 ) {
 			/* root doesn't need old passwd */
 			return (pam_set_item(pamh, PAM_OLDAUTHTOK, ""));
 		}
 
 		if ( (old_pwd->pw_passwd[0] == '\0' ) &&
-			( openpam_get_option(pamh, PAM_OPT_NULLOK) ) && 
-			!(flags & PAM_DISALLOW_NULL_AUTHTOK) ) {		
+			( openpam_get_option(pamh, PAM_OPT_NULLOK) ) &&
+			!(flags & PAM_DISALLOW_NULL_AUTHTOK) ) {
 			/*
-			 * Something funny could happen here since we don't 
+			 * Something funny could happen here since we don't
 			 * ask for a password.
 			 */
 			old_pass = "";
@@ -450,8 +450,8 @@ pam_sm_chauthtok(pam_handle_t *pamh, int flags,
 
 
 PAM_EXTERN int
-pam_sm_open_session( pam_handle_t * pamh, int flags, 
-		int argc, const char * argv[]) 
+pam_sm_open_session( pam_handle_t * pamh, int flags,
+		int argc, const char * argv[])
 {
 	char *user, *service;
 	int pam_err;
@@ -463,12 +463,12 @@ pam_sm_open_session( pam_handle_t * pamh, int flags,
 	}
 
 	pam_err = pam_get_item(pamh, PAM_SERVICE, (void *) &service);
-	if ( pam_err != PAM_SUCCESS || service == NULL || *service == '\0') { 
+	if ( pam_err != PAM_SUCCESS || service == NULL || *service == '\0') {
 		PAM_ERROR("Open session - Error recovering service");
 		return (PAM_SESSION_ERR);
 	}
 
-	PAM_LOG("Opened session for user [%s] by %s(uid=%lu)", user, getlogin(), 
+	PAM_LOG("Opened session for user [%s] by %s(uid=%lu)", user, getlogin(),
 			(unsigned long) getuid());
 
 	return PAM_SUCCESS;
@@ -476,8 +476,8 @@ pam_sm_open_session( pam_handle_t * pamh, int flags,
 }
 
 PAM_EXTERN int
-pam_sm_close_session( pam_handle_t * pamh, int flags, 
-		int argc, const char * argv[]) 
+pam_sm_close_session( pam_handle_t * pamh, int flags,
+		int argc, const char * argv[])
 {
 	char *user, *service;
 	int pam_err;
@@ -488,7 +488,7 @@ pam_sm_close_session( pam_handle_t * pamh, int flags,
 	}
 
 	pam_err = pam_get_item(pamh, PAM_SERVICE, (void *) &service);
-	if ( pam_err != PAM_SUCCESS || service == NULL || *service == '\0') { 
+	if ( pam_err != PAM_SUCCESS || service == NULL || *service == '\0') {
 		PAM_ERROR("Close session - Error recovering service");
 		return (PAM_SESSION_ERR);
 	}
@@ -510,7 +510,7 @@ static int update_shadow( pam_handle_t * pamh , const char * user,
 	struct stat filestat;
 
 
-	if ( getspnam(user) == NULL) 
+	if ( getspnam(user) == NULL)
 		return PAM_USER_UNKNOWN;
 
 	if ( (oldshadow = fopen ("/etc/shadow", "r")) == NULL ) {
@@ -519,13 +519,13 @@ static int update_shadow( pam_handle_t * pamh , const char * user,
 		return (PAM_AUTHTOK_ERR);
 	}
 
-	if ( (newshadow = fopen (NEW_SHADOW, "w")) == NULL ) { 
+	if ( (newshadow = fopen (NEW_SHADOW, "w")) == NULL ) {
 		PAM_ERROR("Could not open temp file. Updating shadow \
 				database cancelled.");
 		fclose(oldshadow);
 		return (PAM_AUTHTOK_ERR);
-	} 
-	
+	}
+
 	if (fstat(fileno(oldshadow), &filestat) == -1 ) {
 		PAM_ERROR("Could not get stat for /etc/shadow. \
 				Updating shadow database cancelled.");
@@ -535,7 +535,7 @@ static int update_shadow( pam_handle_t * pamh , const char * user,
 		return (PAM_AUTHTOK_ERR);
 	}
 
-	if (fchown(fileno(newshadow), filestat.st_uid, filestat.st_gid) == -1 ) { 
+	if (fchown(fileno(newshadow), filestat.st_uid, filestat.st_gid) == -1 ) {
 		PAM_ERROR("Could not set uid/gid for new shadwow file. \
 				Updating shadow database cancelled.");
 		fclose(oldshadow);
@@ -544,7 +544,7 @@ static int update_shadow( pam_handle_t * pamh , const char * user,
 		return (PAM_AUTHTOK_ERR);
 	}
 
-	if (fchmod(fileno(newshadow), filestat.st_mode) == -1 ) { 
+	if (fchmod(fileno(newshadow), filestat.st_mode) == -1 ) {
 		PAM_ERROR("Could not chmod for new shadow file. \
 				Updating shadow database cancelled.");
 		fclose(oldshadow);
@@ -553,15 +553,15 @@ static int update_shadow( pam_handle_t * pamh , const char * user,
 		return (PAM_AUTHTOK_ERR);
 	}
 
-	while ( (cur_pwd = fgetspent(oldshadow)) ) { 
-		if( strlen(user) == strlen(cur_pwd->sp_namp) 
+	while ( (cur_pwd = fgetspent(oldshadow)) ) {
+		if( strlen(user) == strlen(cur_pwd->sp_namp)
 				&& !strncmp(cur_pwd->sp_namp, user, strlen(user))) {
-			cur_pwd->sp_pwdp = newhashedpwd; 
+			cur_pwd->sp_pwdp = newhashedpwd;
 			cur_pwd->sp_lstchg = time(NULL) / (60 * 60 * 24);
 			PAM_LOG("Updated password for user [%s]",user);
 		}
 
-		if(putspent(cur_pwd, newshadow)) { 
+		if(putspent(cur_pwd, newshadow)) {
 			PAM_ERROR("Error writing entry to new shadow file. \
 					Updating shadow database cancelled.");
 			fclose(oldshadow);
@@ -570,7 +570,7 @@ static int update_shadow( pam_handle_t * pamh , const char * user,
 			return (PAM_AUTHTOK_ERR);
 		}
 	}
-	
+
 	fclose(oldshadow);
 
 	if (fclose(newshadow)) {
@@ -579,7 +579,7 @@ static int update_shadow( pam_handle_t * pamh , const char * user,
 		return (PAM_AUTHTOK_ERR);
 	}
 
-	/* 
+	/*
 	 * If program flow has come up to here, all is good
 	 * and it's safe to update the shadow file.
 	 */
@@ -591,7 +591,7 @@ static int update_shadow( pam_handle_t * pamh , const char * user,
 		unlink(NEW_SHADOW);
 		return (PAM_AUTHTOK_ERR);
 	}
-	
+
 	return (PAM_SUCCESS);
 
 }
@@ -609,7 +609,7 @@ static int update_passwd( pam_handle_t * pamh, const char * user,
 	struct stat filestat;
 
 
-	if ( getpwnam(user) == NULL) 
+	if ( getpwnam(user) == NULL)
 		return PAM_USER_UNKNOWN;
 
 	if ( (oldpasswd = fopen ("/etc/passwd", "r")) == NULL ) {
@@ -618,13 +618,13 @@ static int update_passwd( pam_handle_t * pamh, const char * user,
 		return (PAM_AUTHTOK_ERR);
 	}
 
-	if ( (newpasswd = fopen (NEW_PASSWD, "w")) == NULL ) { 
+	if ( (newpasswd = fopen (NEW_PASSWD, "w")) == NULL ) {
 		PAM_ERROR("Could not open temp file. Updating passwd \
 				database cancelled.");
 		fclose(oldpasswd);
 		return (PAM_AUTHTOK_ERR);
-	} 
-	
+	}
+
 	if (fstat(fileno(oldpasswd), &filestat) == -1 ) {
 		PAM_ERROR("Could not get stat for /etc/passwd. \
 				Updating passwd database cancelled.");
@@ -634,7 +634,7 @@ static int update_passwd( pam_handle_t * pamh, const char * user,
 		return (PAM_AUTHTOK_ERR);
 	}
 
-	if (fchown(fileno(newpasswd), filestat.st_uid, filestat.st_gid) == -1 ) { 
+	if (fchown(fileno(newpasswd), filestat.st_uid, filestat.st_gid) == -1 ) {
 		PAM_ERROR("Could not set uid/gid for new shadwow file. \
 				Updating passwd database cancelled.");
 		fclose(oldpasswd);
@@ -643,7 +643,7 @@ static int update_passwd( pam_handle_t * pamh, const char * user,
 		return (PAM_AUTHTOK_ERR);
 	}
 
-	if (fchmod(fileno(newpasswd), filestat.st_mode) == -1 ) { 
+	if (fchmod(fileno(newpasswd), filestat.st_mode) == -1 ) {
 		PAM_ERROR("Could not chmod for new passwd file. \
 				Updating passwd database cancelled.");
 		fclose(oldpasswd);
@@ -652,14 +652,14 @@ static int update_passwd( pam_handle_t * pamh, const char * user,
 		return (PAM_AUTHTOK_ERR);
 	}
 
-	while ( (cur_pwd = fgetpwent(oldpasswd)) ) { 
-		if( strlen(user) == strlen(cur_pwd->pw_name) 
+	while ( (cur_pwd = fgetpwent(oldpasswd)) ) {
+		if( strlen(user) == strlen(cur_pwd->pw_name)
 				&& !strncmp(cur_pwd->pw_name, user, strlen(user))) {
-			cur_pwd->pw_passwd = newhashedpwd; 
+			cur_pwd->pw_passwd = newhashedpwd;
 			PAM_LOG("Updated password for user [%s]",user);
 		}
 
-		if(putpwent(cur_pwd, newpasswd)) { 
+		if(putpwent(cur_pwd, newpasswd)) {
 			PAM_ERROR("Error writing entry to new passwd file. \
 					Updating passwd database cancelled.");
 			fclose(oldpasswd);
@@ -668,7 +668,7 @@ static int update_passwd( pam_handle_t * pamh, const char * user,
 			return (PAM_AUTHTOK_ERR);
 		}
 	}
-	
+
 	fclose(oldpasswd);
 
 	if (fclose(newpasswd)) {
@@ -677,7 +677,7 @@ static int update_passwd( pam_handle_t * pamh, const char * user,
 		return (PAM_AUTHTOK_ERR);
 	}
 
-	/* 
+	/*
 	 * If program flow has come up to here, all is good
 	 * and it's safe to update the passwd file.
 	 */
@@ -689,21 +689,21 @@ static int update_passwd( pam_handle_t * pamh, const char * user,
 		unlink(NEW_PASSWD);
 		return (PAM_AUTHTOK_ERR);
 	}
-	
+
 	return (PAM_SUCCESS);
 
 }
 
 
-/* 
+/*
  * Read hashed password for user from shadow entry.
  * This is for use on Linux machines only.
  */
-static char * read_shadow(const char * user) { 
+static char * read_shadow(const char * user) {
 
 	struct spwd * pwd;
-	/* 
-	 * No error checking. Everything has been tested prior to 
+	/*
+	 * No error checking. Everything has been tested prior to
 	 * calling this function. Nothing can go wrong, right?
 	 */
 	pwd = getspnam(user);

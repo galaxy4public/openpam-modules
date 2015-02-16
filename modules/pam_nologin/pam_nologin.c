@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2008 Seraphim Mellos <mellos@ceid.upatras.gr>
- * 
+ *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
  * files (the "Software"), to deal in the Software without
@@ -9,10 +9,10 @@
  * copies of the Software, and to permit persons to whom the
  * Software is furnished to do so, subject to the following
  * conditions:
- * 
+ *
  * The above copyright notice and this permission notice shall be
  * included in all copies or substantial portions of the Software.
- * 
+ *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
  * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
  * OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
@@ -21,11 +21,11 @@
  * WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
  * OTHER DEALINGS IN THE SOFTWARE.
- */ 
+ */
 
 #include <sys/types.h>
 #include <sys/stat.h>
-#include <stdio.h> 
+#include <stdio.h>
 #include <stdlib.h>
 #include <fcntl.h>
 #include <unistd.h>
@@ -39,15 +39,15 @@
 
 #define NOLOGIN "/etc/nologin"
 
-PAM_EXTERN int 
-pam_sm_authenticate( pam_handle_t *pamh, int flags, 
-		int argc, const char * argv[] ) 
+PAM_EXTERN int
+pam_sm_authenticate( pam_handle_t *pamh, int flags,
+		int argc, const char * argv[] )
 {
 	struct passwd *pwd;
 	struct stat st;
 	char *mtmp = NULL;
 	const char * user;
-	int pam_err, fd; 
+	int pam_err, fd;
 
 	if( (pam_err = pam_get_user(pamh,&user, NULL)) != PAM_SUCCESS ||
 			(user == NULL) ) {
@@ -56,9 +56,9 @@ pam_sm_authenticate( pam_handle_t *pamh, int flags,
 	}
 
 	fd = open(NOLOGIN, O_RDONLY, 0);
-	/* 
+	/*
 	 * LinuxPAM's nologin returns PAM_IGNORE when no 'nologin' file is
-	 * present while freebsd's nologin returns PAM_SUCCESS. We'll go 
+	 * present while freebsd's nologin returns PAM_SUCCESS. We'll go
 	 * with PAM_IGNORE
 	 * */
 
@@ -68,15 +68,15 @@ pam_sm_authenticate( pam_handle_t *pamh, int flags,
 	pwd = getpwnam(user);
 	if(pwd && pwd->pw_uid == 0 )
 		pam_err = PAM_SUCCESS;
-	else { 
-		if ( ! pwd ) 
+	else {
+		if ( ! pwd )
 			pam_err = PAM_USER_UNKNOWN;
-	 	else 
+	 	else
 			pam_err = PAM_AUTH_ERR;
 	}
 
 	/* get contents of /etc/nologin */
-	if (fstat(fd,&st) < 0) { 
+	if (fstat(fd,&st) < 0) {
 		close(fd);
 		free(mtmp);
 		return (pam_err);
@@ -94,7 +94,7 @@ pam_sm_authenticate( pam_handle_t *pamh, int flags,
 	if ( read(fd, mtmp, st.st_size) == st.st_size ) {
 		mtmp[st.st_size] = '\0';
 		PAM_ERROR("%s", mtmp);
-	} else 
+	} else
 		pam_err = PAM_SYSTEM_ERR;
 
 	close(fd);
@@ -102,7 +102,7 @@ pam_sm_authenticate( pam_handle_t *pamh, int flags,
 
 	return (pam_err);
 
-}	
+}
 
 PAM_EXTERN int
 pam_sm_setcred(pam_handle_t *pamh , int flags ,

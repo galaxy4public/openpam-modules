@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2008 Seraphim Mellos <mellos@ceid.upatras.gr>
- * 
+ *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
  * files (the "Software"), to deal in the Software without
@@ -9,10 +9,10 @@
  * copies of the Software, and to permit persons to whom the
  * Software is furnished to do so, subject to the following
  * conditions:
- * 
+ *
  * The above copyright notice and this permission notice shall be
  * included in all copies or substantial portions of the Software.
- * 
+ *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
  * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
  * OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
@@ -21,7 +21,7 @@
  * WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
  * OTHER DEALINGS IN THE SOFTWARE.
- */ 
+ */
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -40,7 +40,7 @@
 
 PAM_EXTERN int
 pam_sm_authenticate(pam_handle_t * pamh, int flags,
-		int argc, const char * argv[]) 
+		int argc, const char * argv[])
 {
 	struct passwd *opwd,*tpwd;
 	struct group *group;
@@ -79,13 +79,13 @@ pam_sm_authenticate(pam_handle_t * pamh, int flags,
 		PAM_ERROR("Could not get passwd entry for user [%s]",orig_user);
 		return (PAM_SERVICE_ERR);
 	}
-	
+
 	/* We now have all user info we need */
 
-	if ( (group = getgrnam("wheel")) == NULL ) { 
-		group = getgrgid(0); 
+	if ( (group = getgrnam("wheel")) == NULL ) {
+		group = getgrgid(0);
 	}
-	
+
 	/* Check wheel or group with GID 0 have any members */
 
 	if (!group || (!group->gr_mem && (opwd->pw_gid != group->gr_gid))) {
@@ -94,18 +94,18 @@ pam_sm_authenticate(pam_handle_t * pamh, int flags,
 	}
 	/* Check user's membership to the interested groups */
 	member=0;
-	user_list = group->gr_mem; 
+	user_list = group->gr_mem;
 	while ( !member && user_list && *(user_list) ) {
-		if (strncmp(*user_list, orig_user, strlen(orig_user)-1 ) == 0) 
+		if (strncmp(*user_list, orig_user, strlen(orig_user)-1 ) == 0)
 		            member=1;
-		
+
 		user_list++;
 	}
-	
-	if ( member || ( opwd->pw_gid == group->gr_gid ) ) { 
+
+	if ( member || ( opwd->pw_gid == group->gr_gid ) ) {
 		PAM_LOG("Access granted for user '%s' to user '%s'", orig_user, target_user);
 		return (PAM_SUCCESS);
-	} else { 
+	} else {
 		PAM_ERROR("Access denied for user '%s' to user '%s'", orig_user, target_user);
 		return (PAM_PERM_DENIED);
 	}

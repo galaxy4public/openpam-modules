@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2008 Seraphim Mellos <mellos@ceid.upatras.gr>
- * 
+ *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
  * files (the "Software"), to deal in the Software without
@@ -9,10 +9,10 @@
  * copies of the Software, and to permit persons to whom the
  * Software is furnished to do so, subject to the following
  * conditions:
- * 
+ *
  * The above copyright notice and this permission notice shall be
  * included in all copies or substantial portions of the Software.
- * 
+ *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
  * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
  * OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
@@ -21,7 +21,7 @@
  * WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
  * OTHER DEALINGS IN THE SOFTWARE.
- */ 
+ */
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -40,30 +40,30 @@
 
 PAM_EXTERN int
 pam_sm_authenticate(pam_handle_t * pamh, int flags,
-		int argc, const char * argv[]) 
+		int argc, const char * argv[])
 {
 	struct passwd *pwd;
 	struct stat shellfileinfo;
 	const char *user;
-	const char *shell; 
+	const char *shell;
 	char shellfileline[256];
 	FILE *shellfile;
 	int pam_err;
 
-	if ( ( (pam_err = pam_get_user(pamh, &user, NULL)) != PAM_SUCCESS ) 
+	if ( ( (pam_err = pam_get_user(pamh, &user, NULL)) != PAM_SUCCESS )
 			|| ( user == NULL ) )  {
 		PAM_ERROR("Error recovering username.");
 		return (pam_err);
 	}
 
-	if ( (pwd = getpwnam(user)) == NULL ) { 
+	if ( (pwd = getpwnam(user)) == NULL ) {
 		PAM_ERROR("Could not get passwd entry for user [%s]",user);
 		return (PAM_SERVICE_ERR);
 	}
-	
-	shell = pwd->pw_shell; 
 
-	if ( stat(SHELLS, &shellfileinfo) ) { 
+	shell = pwd->pw_shell;
+
+	if ( stat(SHELLS, &shellfileinfo) ) {
 		PAM_ERROR("Could not open SHELLS file :%s", SHELLS);
 		return (PAM_AUTH_ERR);
 	}
@@ -73,9 +73,9 @@ pam_sm_authenticate(pam_handle_t * pamh, int flags,
 		PAM_ERROR("SHELLS file cannot be trusted!");
 		return (PAM_AUTH_ERR);
 	}
-	
+
 	/* Open read-only file with shells */
-	if ( (shellfile = fopen(SHELLS,"r")) ==  NULL ) { 
+	if ( (shellfile = fopen(SHELLS,"r")) ==  NULL ) {
 		PAM_ERROR("Could not open SHELLS file :%s", SHELLS);
 		return (PAM_SERVICE_ERR);
 	}
@@ -83,8 +83,8 @@ pam_sm_authenticate(pam_handle_t * pamh, int flags,
 	pam_err = 1;
 
 	/* Search in SHELLS for user shell */
-	while (fgets(shellfileline, sizeof(shellfileline)-1, shellfile) != NULL 
-		&& pam_err) { 
+	while (fgets(shellfileline, sizeof(shellfileline)-1, shellfile) != NULL
+		&& pam_err) {
 	        if (shellfileline[strlen(shellfileline) - 1] == '\n')
 	        	shellfileline[strlen(shellfileline) - 1] = '\0';
 
@@ -94,12 +94,12 @@ pam_sm_authenticate(pam_handle_t * pamh, int flags,
 
 	fclose(shellfile);
 
-	if (!pam_err) { 
+	if (!pam_err) {
 		/* user shell found in SHELLS. Allow access */
 		PAM_LOG("Access granted for %s with shell %s.", user, shell);
-		return (PAM_SUCCESS); 
+		return (PAM_SUCCESS);
 	}
-	
+
 	return (PAM_AUTH_ERR);
 }
 
