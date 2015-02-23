@@ -39,10 +39,8 @@
 
 #define NOLOGIN "/etc/nologin"
 
-PAM_EXTERN int
-pam_sm_authenticate( pam_handle_t *pamh, int flags,
-		int argc, const char * argv[] )
-{
+static int
+check_nologin(pam_handle_t *pamh) {
 	struct passwd *pwd;
 	struct stat st;
 	char *mtmp = NULL;
@@ -101,7 +99,21 @@ pam_sm_authenticate( pam_handle_t *pamh, int flags,
 	free (mtmp);
 
 	return (pam_err);
+}
 
+PAM_EXTERN int
+pam_sm_authenticate( pam_handle_t *pamh, int flags,
+		int argc, const char * argv[] )
+{
+	return check_nologin(pamh);
+}
+
+PAM_EXTERN int
+pam_sm_acct_mgmt(pam_handle_t *pamh , int flags ,
+		    int argc , const char *argv[])
+{
+
+	return check_nologin(pamh);
 }
 
 PAM_EXTERN int
@@ -109,7 +121,7 @@ pam_sm_setcred(pam_handle_t *pamh , int flags ,
 		    int argc , const char *argv[])
 {
 
-	        return (PAM_SUCCESS);
+	return (PAM_SUCCESS);
 }
 
 PAM_MODULE_ENTRY("pam_nologin");
