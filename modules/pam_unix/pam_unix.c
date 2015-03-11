@@ -139,7 +139,7 @@ pam_sm_authenticate(pam_handle_t *pamh, int flags,
 			if (!(flags & PAM_DISALLOW_NULL_AUTHTOK) &&
 					openpam_get_option(pamh, PAM_OPT_NULLOK)){
 				PAM_LOG("User [%s] has empty password. \
-						Authentication succesfull.", user);
+						Authentication successful.", user);
 				return (PAM_SUCCESS);
 			}
 		}
@@ -162,6 +162,11 @@ pam_sm_authenticate(pam_handle_t *pamh, int flags,
 
 	if ( strncmp(real_hash, "x", sizeof(char)) != 0 ) {
 		real_hash = read_shadow(user);
+	}
+
+	if ( strncmp(real_hash, "!", sizeof(char)) == 0 ) {
+		PAM_ERROR("Account disabled: '%s'", user);
+		return (PAM_AUTH_ERR);
 	}
 
 	crypt_pass = crypt(pass, real_hash);
