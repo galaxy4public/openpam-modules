@@ -1,45 +1,22 @@
-#
-## Copyright (c) 2008 by Seraphim Mellos.  See LICENSE.
-#
+dist_man8_MANS = pam_unix.8
 
-include ../../Make.defs
+securelibdir = $(SECUREDIR)
+secureconfdir = $(SCONFIGDIR)
 
-TITLE = pam_unix
-PAM_SO_SUFFIX = 
-LIBSHARED = $(TITLE).so$(PAM_SO_SUFFIX)
-SHLIBMODE = 755
-MAN8 = $(TITLE).8
-MANMODE = 644
-SECUREDIR = /lib/security
-MANDIR = /usr/share/man/man8
-#DESTDIR =
+AM_CFLAGS = -I$(top_srcdir)/include \
+        $(WARN_CFLAGS)
+AM_LDFLAGS = -no-undefined -avoid-version -module
+if HAVE_VERSIONING
+  AM_LDFLAGS += -Wl,--version-script=$(srcdir)/../modules.map
+endif
 
+securelib_LTLIBRARIES = pam_unix.la
+pam_unix_la_LIBADD = -lpam
 
+#check_PROGRAMS = tst-pam_unix-retval
+#tst_pam_unix_retval_LDADD = -lpam
 
-PROJ = $(LIBSHARED)
-OBJS = pam_unix.o util.o
+noinst_HEADERS = util.h
 
-all:
-	case "`uname -s`" in \
-	Linux)  $(MAKE) CFLAGS="$(CFLAGS)" LDFLAGS="$(LDFLAGS)" \
-			LDLIBS="$(LDLIBS)" $(PROJ);;\
-	*) 	 echo "OS not supported.";;\
-	esac
-
-$(LIBSHARED): $(OBJS) 
-	$(LD) $(LDFLAGS) $(OBJS) $(LDLIBS) -o $(LIBSHARED)
-
-.c.o:
-	$(CC) $(CFLAGS) -c $*.c
-
-install: 
-	$(INST) -m $(SHLIBMODE) -o root -g root $(LIBSHARED) $(SECUREDIR) 
-	$(INST) -m $(MANMODE) -o root -g root $(MAN8) $(MANDIR)
-
-
-
-clean:
-	$(RM) $(PROJ) *.o
-
-
+pam_unix_la_SOURCES = pam_unix.c util.c
 

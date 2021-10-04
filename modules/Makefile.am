@@ -1,10 +1,12 @@
-all install clean: 
-	$(MAKE) -C pam_unix $@
-	$(MAKE) -C pam_securetty $@
-	$(MAKE) -C pam_nologin $@
-	$(MAKE) -C pam_shells $@
-	$(MAKE) -C pam_wheel $@
-	$(MAKE) -C pam_rootok $@
-	$(MAKE) -C pam_permit $@
-	$(MAKE) -C pam_deny $@
+SUBDIRS = \
+	pam_deny	\
+	pam_nologin	\
+	pam_permit	\
+	pam_rootok	\
+	pam_securetty	\
+	pam_shells	\
+	pam_unix	\
+	pam_wheel	\
+	#
 
+EXTRA_DIST = modules.map
