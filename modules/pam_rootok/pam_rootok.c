@@ -23,7 +23,6 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#include <sys/cdefs.h>
 #include <unistd.h>
 #include <syslog.h>
 #include <stdio.h>
