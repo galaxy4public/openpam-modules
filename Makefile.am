@@ -4,7 +4,7 @@ SUBDIRS = modules
 
 CLEANFILES = *~
 
-EXTRA_DIST =
+EXTRA_DIST = include/security/pam_mod_misc.h
 
 ACLOCAL_AMFLAGS = -I m4
 
