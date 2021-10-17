@@ -23,6 +23,7 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
+#define _GNU_SOURCE
 #include <pwd.h>
 #include <netdb.h>
 #include <sys/types.h>

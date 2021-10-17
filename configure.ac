@@ -83,62 +83,27 @@ AC_TYPE_SSIZE_T
 AC_FUNC_MALLOC
 AC_CHECK_FUNCS([getspnam strcasecmp strchr])
 
-dnl
-dnl Check if --version-script is supported by ld
-dnl
-AC_CACHE_CHECK(for .symver assembler directive, libc_cv_asm_symver_directive,[dnl
-cat > conftest.s <<EOF
-${libc_cv_dot_text}
-_sym:
-.symver _sym,sym@VERS
-EOF
-if ${CC-cc} -c $ASFLAGS conftest.s 1>&AS_MESSAGE_LOG_FD 2>&AS_MESSAGE_LOG_FD
-then
-	libc_cv_asm_symver_directive=yes
-else
-	libc_cv_asm_symver_directive=no
-fi
-rm -f conftest*
-])
-AC_CACHE_CHECK(for ld --version-script, libc_cv_ld_version_script_option, [dnl
-if test $libc_cv_asm_symver_directive = yesr
-then
-	cat > conftest.s <<-EOF
-		${libc_cv_dot_text}
-		_sym:
-		.symver _sym,sym@VERS
-		EOF
-	cat > conftest.map <<-EOF
-		VERS_1 {
-			global: sym;
-		};
+AC_ARG_ENABLE([symbol-versioning],
+AS_HELP_STRING([--disable-symbol-versioning],[Disable symbol versioning in shared objects]))
 
-		VERS_2 {
-			global: sym;
-		} VERS_1;
-		EOF
-	if ${CC-cc} -c $ASFLAGS conftest.s 1>&AS_MESSAGE_LOG_FD 2>&AS_MESSAGE_LOG_FD
-	then
-		if AC_TRY_COMMAND([dnl
-			${CC-cc} $CFLAGS $LDFLAGS -shared
-				-o conftest.so conftest.o
-				-nostartfiles -nostdlib
-				-Wl,--version-script,conftest.map
-		       1>&AS_MESSAGE_LOG_FD])
-		then
-			libc_cv_ld_version_script_option=yes
-		else
-			libc_cv_ld_version_script_option=no
-		fi
-	else
-		libc_cv_ld_version_script_option=no
-	fi
-else
-	libc_cv_ld_version_script_option=no
+AC_CACHE_CHECK([whether symbol versioning is supported], ac_cv_symbol_versioning, [dnl
+AC_COMPILE_IFELSE([AC_LANG_SOURCE([dnl
+#define NEW_VERSION(name, version) \
+  asm (".symver " #name "," #name "@@@" #version);
+int foo(int x) { return x + 1; }
+NEW_VERSION (foo, TEST_2.34)
+])], ac_cv_symbol_versioning=yes, ac_cv_symbol_versioning=no)])
+if test "$ac_cv_symbol_versioning" = "no"; then
+    if test "x$enable_symbol_versioning" != "xno"; then
+        AC_MSG_ERROR([Symbol versioning is not supported.
+                      Use --disable-symbol-versioning to build without.])
+    fi
 fi
-rm -f conftest*])
-AM_CONDITIONAL([HAVE_VERSIONING],
-	[test "$libc_cv_ld_version_script_option" = "yes"])
+
+AM_CONDITIONAL(SYMBOL_VERSIONING, [test "x$enable_symbol_versioning" != "xno"])
+AS_IF([test "x$enable_symbol_versioning" = "xno"],
+      [AC_MSG_WARN([Disabling symbol versioning breaks ABI compatibility.])
+       enable_symbol_versioning=no],[enable_symbol_versioning=yes])
 
 AC_ARG_ENABLE(securedir,
         AS_HELP_STRING([--enable-securedir=DIR],[path to location of PAMs @<:@default=$libdir/security@:>@]),

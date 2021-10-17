@@ -6,7 +6,7 @@ secureconfdir = $(SCONFIGDIR)
 AM_CFLAGS = -I$(top_srcdir)/include \
         $(WARN_CFLAGS)
 AM_LDFLAGS = -no-undefined -avoid-version -module
-if HAVE_VERSIONING
+if SYMBOL_VERSIONING
   AM_LDFLAGS += -Wl,--version-script=$(srcdir)/../modules.map
 endif
 
